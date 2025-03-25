@@ -39,7 +39,6 @@ class SLAM:
             opt_params,
             pipeline_params,
         )
-
         self.live_mode = self.config["Dataset"]["type"] == "realsense"
         self.monocular = self.config["Dataset"]["sensor_type"] == "monocular"
         self.use_spherical_harmonics = self.config["Training"]["spherical_harmonics"]
@@ -60,6 +59,7 @@ class SLAM:
         bg_color = [0, 0, 0]
         self.background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
+        self.render_interval = self.config["Training"]["kf_interval"]
         frontend_queue = mp.Queue()
         backend_queue = mp.Queue()
 
@@ -138,6 +138,7 @@ class SLAM:
                 self.pipeline_params,
                 self.background,
                 kf_indices=kf_indices,
+                render_interval=self.render_interval,
                 iteration="before_opt",
             )
             columns = ["tag", "psnr", "ssim", "lpips", "RMSE ATE", "FPS"]
@@ -173,6 +174,7 @@ class SLAM:
                 self.pipeline_params,
                 self.background,
                 kf_indices=kf_indices,
+                render_interval=self.render_interval,
                 iteration="after_opt",
             )
             metrics_table.add_data(

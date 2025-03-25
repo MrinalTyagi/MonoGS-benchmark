@@ -408,6 +408,7 @@ class BackEnd(mp.Process):
 
                 elif data[0] == "keyframe":
                     cur_frame_idx = data[1]
+                    print("Backend called at:", cur_frame_idx)
                     viewpoint = data[2]
                     current_window = data[3]
                     depth_map = data[4]

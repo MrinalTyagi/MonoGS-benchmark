@@ -408,16 +408,19 @@ class FrontEnd(mp.Process):
                     self.cleanup(cur_frame_idx)
                     cur_frame_idx += 1
                     continue
-
+                
                 last_keyframe_idx = self.current_window[0]
-                check_time = (cur_frame_idx - last_keyframe_idx) >= self.kf_interval
+                if last_keyframe_idx == 0:
+                    check_time = (cur_frame_idx - last_keyframe_idx)+1 >= self.kf_interval
+                else:
+                    check_time = (cur_frame_idx - last_keyframe_idx) >= self.kf_interval
                 curr_visibility = (render_pkg["n_touched"] > 0).long()
                 create_kf = self.is_keyframe(
                     cur_frame_idx,
                     last_keyframe_idx,
                     curr_visibility,
                     self.occ_aware_visibility,
-                )
+                ) and (cur_frame_idx + 1) % self.kf_interval == 0
                 if len(self.current_window) < self.window_size:
                     union = torch.logical_or(
                         curr_visibility, self.occ_aware_visibility[last_keyframe_idx]
@@ -426,12 +429,14 @@ class FrontEnd(mp.Process):
                         curr_visibility, self.occ_aware_visibility[last_keyframe_idx]
                     ).count_nonzero()
                     point_ratio = intersection / union
+                    # print("Intersection: ", intersection, " Union: ", union)
                     create_kf = (
                         check_time
-                        and point_ratio < self.config["Training"]["kf_overlap"]
+                        and point_ratio < self.config["Training"]["kf_overlap"] and (cur_frame_idx + 1) % self.kf_interval == 0
                     )
                 if self.single_thread:
-                    create_kf = check_time and create_kf
+                    create_kf = check_time and create_kf 
+                # print("Values of create_kf: ", create_kf, " checktime: ", check_time)
                 if create_kf:
                     self.current_window, removed = self.add_to_window(
                         cur_frame_idx,
@@ -445,6 +450,8 @@ class FrontEnd(mp.Process):
                             "Keyframes lacks sufficient overlap to initialize the map, resetting."
                         )
                         continue
+                    print("Frontend called at: ", cur_frame_idx)
+                    print("Current window is: ", self.current_window)
                     depth_map = self.add_new_keyframe(
                         cur_frame_idx,
                         depth=render_pkg["depth"],

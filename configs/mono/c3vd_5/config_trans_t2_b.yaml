@@ -1,0 +1,17 @@
+Dataset:
+  Calibration:
+    cx: 334.143
+    cy: 273.8665
+    depth_scale: 2.55
+    distorted: false
+    fx: 401.1595
+    fy: 400.9425
+    height: 540
+    k1: 0.0
+    k2: 0.0
+    k3: 0.0
+    p1: 0.0
+    p2: 0.0
+    width: 675
+  dataset_path: datasets/c3vd_mono/trans_t2_b
+inherit_from: configs/mono/c3vd_5/base_config.yaml

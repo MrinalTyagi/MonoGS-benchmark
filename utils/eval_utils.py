@@ -121,24 +121,31 @@ def eval_rendering(
     pipe,
     background,
     kf_indices,
+    render_interval,
     iteration="final",
 ):
-    interval = 5
+    interval = 1
     img_pred, img_gt, saved_frame_idx = [], [], []
     end_idx = len(frames) - 1 if iteration == "final" or "before_opt" else iteration
     psnr_array, ssim_array, lpips_array = [], [], []
     cal_lpips = LearnedPerceptualImagePatchSimilarity(
         net_type="alex", normalize=True
     ).to("cuda")
+    print("Final selected keyframes are: ", kf_indices)
     for idx in range(0, end_idx, interval):
-        if idx in kf_indices:
-            continue
+        if render_interval == 1:
+            pass
+        else:
+            if idx in kf_indices or (idx + 1) % render_interval == 0:
+                continue
         saved_frame_idx.append(idx)
         frame = frames[idx]
-        gt_image, _, _ = dataset[idx]
+        gt_image, gt_depth, _ = dataset[idx]
 
-        rendering = render(frame, gaussians, pipe, background)["render"]
-        image = torch.clamp(rendering, 0.0, 1.0)
+        rendering = render(frame, gaussians, pipe, background)
+        image = torch.clamp(rendering["render"], 0.0, 1.0)
+        depth = rendering["depth"]
+
 
         gt = (gt_image.cpu().numpy().transpose((1, 2, 0)) * 255).astype(np.uint8)
         pred = (image.detach().cpu().numpy().transpose((1, 2, 0)) * 255).astype(
@@ -148,6 +155,27 @@ def eval_rendering(
         pred = cv2.cvtColor(pred, cv2.COLOR_BGR2RGB)
         img_pred.append(pred)
         img_gt.append(gt)
+
+        gt_depth = (gt_depth - gt_depth.min()) / (gt_depth.max() - gt_depth.min() + 1e-8)
+        pred_depth = depth.squeeze(0).detach().cpu().numpy()
+        pred_depth = (pred_depth - pred_depth.min()) / (pred_depth.max() - pred_depth.min() + 1e-8)
+        gt_depth = (gt_depth * 255).astype(np.uint8)
+        pred_depth = (pred_depth * 255).astype(
+            np.uint8
+        )
+        gt_depth = cv2.cvtColor(gt_depth, cv2.COLOR_BGR2RGB)
+        pred_depth = cv2.cvtColor(pred_depth, cv2.COLOR_BGR2RGB)
+
+        os.makedirs(os.path.join(save_dir, "reconstruction", "rgb", "gt"), exist_ok=True)
+        os.makedirs(os.path.join(save_dir, "reconstruction", "rgb", "pred"), exist_ok=True)
+        os.makedirs(os.path.join(save_dir, "reconstruction", "depth", "gt"), exist_ok=True)
+        os.makedirs(os.path.join(save_dir, "reconstruction", "depth", "pred"), exist_ok=True)
+
+        cv2.imwrite(os.path.join(save_dir, "reconstruction", "rgb", "pred", f"{idx}.png"), pred)
+        cv2.imwrite(os.path.join(save_dir, "reconstruction", "rgb", "gt", f"{idx}.png"), gt)
+
+        cv2.imwrite(os.path.join(save_dir, "reconstruction", "depth", "pred", f"{idx}.png"), pred_depth)
+        cv2.imwrite(os.path.join(save_dir, "reconstruction", "depth", "gt", f"{idx}.png"), gt_depth)
 
         mask = gt_image > 0
 
@@ -163,6 +191,9 @@ def eval_rendering(
     output["mean_psnr"] = float(np.mean(psnr_array))
     output["mean_ssim"] = float(np.mean(ssim_array))
     output["mean_lpips"] = float(np.mean(lpips_array))
+    output["std_psnr"] = float(np.std(psnr_array))
+    output["std_ssim"] = float(np.std(ssim_array))
+    output["std_lpips"] = float(np.std(lpips_array))
 
     Log(
         f'mean psnr: {output["mean_psnr"]}, ssim: {output["mean_ssim"]}, lpips: {output["mean_lpips"]}',
@@ -178,6 +209,7 @@ def eval_rendering(
         indent=4,
     )
     return output
+
 
 
 def save_gaussians(gaussians, name, iteration, final=False):
