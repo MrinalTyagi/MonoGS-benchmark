@@ -259,6 +259,10 @@ class MonocularDataset(BaseDataset):
         pose = self.poses[idx]
 
         image = np.array(Image.open(color_path))
+        if image.shape[-1] >3:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         depth = None
 
         if self.disorted:

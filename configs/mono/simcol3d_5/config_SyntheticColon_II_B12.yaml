@@ -13,5 +13,5 @@ Dataset:
     p1: 0.0
     p2: 0.0
     width: 475
-  dataset_path: datasets/simcol3d_5/SyntheticColon_II_B12
+  dataset_path: datasets/simcol3d_mono/SyntheticColon_II_B12
 inherit_from: configs/mono/simcol3d_5/base_config.yaml
