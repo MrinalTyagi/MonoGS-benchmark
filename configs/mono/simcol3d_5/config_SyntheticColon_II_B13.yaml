@@ -1,0 +1,17 @@
+Dataset:
+  Calibration:
+    cx: 227.60416
+    cy: 237.5
+    depth_scale: 3276.8
+    distorted: false
+    fx: 227.60416
+    fy: 237.5
+    height: 475
+    k1: 0.0
+    k2: 0.0
+    k3: 0.0
+    p1: 0.0
+    p2: 0.0
+    width: 475
+  dataset_path: datasets/simcol3d_5/SyntheticColon_II_B13
+inherit_from: configs/mono/simcol3d_5/base_config.yaml
